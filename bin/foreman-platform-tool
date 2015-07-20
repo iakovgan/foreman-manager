@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'yaml'
+require "colorize"
+require 'output_logger'
+require 'foreman_settings'
+require 'foreman_platform_tool'
+
+
+
+
+
+command = ForemanPlatformTool::Command.new
+
+if !ARGV[0].nil?
+	args = {}
+	ARGV.each do |arg|
+		if arg.include?("=") and param = arg.split("=").map{|ar| ar.sub("--", "")}
+			args.merge!({param[0] => param[1]})
+		end
+	end
+	$logger = OutputLogger.new({:debug_mode => ARGV.include?("--debug"), :info_mode => (args["info"] || true), :trace => ARGV.include?("--trace")})
+	$foreman_settings = ForemanSettings.load(args)
+	$foreman_settings.get_user_id
+	if $foreman_settings.user_id.nil?
+		$logger.error "Invalid foreman username/password"
+		return
+	end
+	
+	if ARGV[0].to_s == "help"
+		ARGV[1].to_s.empty? ? command.help : command.send("#{ARGV[1].strip()}_help")
+	else
+		args.merge!(ARGV.include?("--noop") ? {"noop" => true} : {})
+		command.send(ARGV[0].to_s, args)
+	end
+else
+	command.help
+end
+
+
+
